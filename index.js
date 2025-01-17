@@ -2,6 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
+const validator = require('validator');
 const app = express();
 
 // Basic Configuration
@@ -30,11 +31,10 @@ app.get('/api/shorturl/:id', (req, res) => {
 });
 
 app.post('/api/shorturl', (req, res) => {
-  try {
-    new URL(req.body.url);
-  } catch (err) {
+  if(!validator.isURL(req.body.url))
+  {
     res.json({
-      error: "invalid url"
+      error: 'invalid url'
     });
     return;
   }
