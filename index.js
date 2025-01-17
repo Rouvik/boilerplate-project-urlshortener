@@ -2,7 +2,7 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bodyParser = require('body-parser');
-const validator = require('validator');
+const dns = require("dns");
 const app = express();
 
 // Basic Configuration
@@ -15,47 +15,61 @@ app.use(cors());
 
 app.use('/public', express.static(`${process.cwd()}/public`));
 
-app.get('/', function(req, res) {
+app.get('/', function (req, res) {
   res.sendFile(process.cwd() + '/views/index.html');
 });
 
 // Your first API endpoint
-app.get('/api/', function(req, res) {
+app.get('/api/', function (req, res) {
   res.json({ greeting: 'hello API' });
 });
 
-app.use(bodyParser.urlencoded({extended: false}));
+app.use(bodyParser.urlencoded({ extended: false }));
 
 app.get('/api/shorturl/:id', (req, res) => {
   res.redirect(urlLookup[req.params.id]);
 });
 
 app.post('/api/shorturl', (req, res) => {
-  if(!validator.isURL(req.body.url))
+  let url = null;
+  try
+  {
+    url = new URL(req.body.url);
+  }
+  catch(err)
   {
     res.json({
-      error: 'invalid url'
+      error: "invalid url"
     });
     return;
   }
-  for (const key in urlLookup) {
-    if(urlLookup[key] == req.body.url)
-    {
+
+  dns.lookup(url.hostname, (err, address, family) => {
+    if (err) {
       res.json({
-        original_url: req.body.url,
-        short_url: key
+        error: "invalid url"
       });
       return;
     }
-  }
-  
-  urlLookup[URL_NUMBER++] = req.body.url;
-  res.json({
-    original_url: req.body.url,
-    short_url: URL_NUMBER - 1
+
+    for (const key in urlLookup) {
+      if (urlLookup[key] == req.body.url) {
+        res.json({
+          original_url: req.body.url,
+          short_url: key
+        });
+        return;
+      }
+    }
+
+    urlLookup[URL_NUMBER++] = req.body.url;
+    res.json({
+      original_url: req.body.url,
+      short_url: URL_NUMBER - 1
+    });
   });
 });
 
-app.listen(port, function() {
+app.listen(port, function () {
   console.log(`Listening on port ${port}`);
 });
